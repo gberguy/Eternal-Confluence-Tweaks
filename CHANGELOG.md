@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.4.3] - 2026-10-15
+
+### Fixed
+- Added an independently configurable safeguard that resets negative player saturation to zero on the server and client, preserving positive values above 20 without requiring Scaling Feast or AppleCore.
+- Prevented Scaling Feast's saturation HUD from crashing on negative saturation while keeping its saturation display enabled. The HUD protection works independently of player saturation correction.
+
 ## [0.4.2] - 2026-10-15
 
 ### Fixed

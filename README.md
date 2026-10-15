@@ -7,6 +7,8 @@ Designed for the Eternal Confluence modpack, this mod provides configurable fixe
 - **Blood Arsenal** (`bloodArsenalSlateItem`): Fixes compressed slate variants having incorrect names, variant handling, and crafting recipe behavior.
 - **Roots** (`rootsAirStateMatcher`): Fixes Wildwood disappearing instead of converting correctly to Runed Wildwood.
 - **Nutrition UEL + Spice of Life** (`nutritionSpiceOfLifeLastItem`): Restores Nutrition awards when food is consumed from a Spice of Life lunchbox or lunchbag, including the last item in a stack.
+- **Player saturation** (`clampNegativeSaturation`): Resets negative player saturation to zero at the end of each player tick on the server and client. Preserves positive saturation, including values above 20, and works without Scaling Feast or AppleCore.
+- **Scaling Feast** (`scalingFeastSafeSaturationHud`): Prevents the saturation HUD from crashing on negative saturation by skipping the affected bar until saturation is nonnegative. Keeps the saturation display enabled and preserves normal colour rotation for values above 20. This safeguard works independently of the player saturation correction.
 - **Lycanites Mobs** (`lycanitesMeleeLineOfSight`): Prevents Lycanites mobs from performing melee attacks through walls and other solid obstacles.
 - **MoreChids** (`morechidsClassGeneration`): Fixes a startup crash when MoreChids generates custom Orechid classes.
 - **Waystones** (`waystonesVillageWeight`, `villageWaystoneWeight`): Makes village Waystones more likely to generate by increasing their piece weight to `100` by default. The weight is configurable; Waystones' original village chance and maximum of one Waystone per village remain in effect.

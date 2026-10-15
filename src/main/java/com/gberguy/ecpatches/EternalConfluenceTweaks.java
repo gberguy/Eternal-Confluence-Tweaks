@@ -5,6 +5,7 @@ import net.minecraftforge.fml.common.Loader;
 import com.gberguy.ecpatches.core.PatchId;
 import com.gberguy.ecpatches.core.PatchSettings;
 import com.gberguy.ecpatches.runtime.GhostlyEvents;
+import com.gberguy.ecpatches.runtime.SaturationGuardEvents;
 import com.gberguy.ecpatches.runtime.WitcheryVillagesToroGuardEvents;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
@@ -25,6 +26,9 @@ public class EternalConfluenceTweaks {
     public void preInit(FMLPreInitializationEvent event) {
         PatchSettings settings = PatchSettings.current();
         MinecraftForge.EVENT_BUS.register(new GhostlyEvents(settings));
+        if (settings.enabled(PatchId.PLAYER_SATURATION)) {
+            MinecraftForge.EVENT_BUS.register(new SaturationGuardEvents(settings));
+        }
         if (settings.enabled(PatchId.WITCHERY_VILLAGES_TORO_GUARDS)
                 && Loader.isModLoaded("witcherywalls") && Loader.isModLoaded("toroquest")) {
             MinecraftForge.EVENT_BUS.register(new WitcheryVillagesToroGuardEvents(settings));

@@ -26,7 +26,8 @@ public class ReleaseLinkageTest {
                     String name = entry.getName();
                     if (!name.endsWith(".class")) continue;
                     if (!(runtime ? name.startsWith("com/gberguy/ecpatches/runtime/")
-                            : name.startsWith("net/minecraft/") || name.startsWith("net/minecraftforge/event/"))) continue;
+                            : name.startsWith("net/minecraft/") || name.startsWith("net/minecraftforge/event/")
+                            || name.startsWith("net/minecraftforge/fml/common/gameevent/TickEvent"))) continue;
                     java.io.ByteArrayOutputStream output = new java.io.ByteArrayOutputStream();
                     try (java.io.InputStream input = jar.getInputStream(entry)) {
                         byte[] buffer = new byte[8192];
@@ -51,6 +52,39 @@ public class ReleaseLinkageTest {
         }
 
         Class<?> define(byte[] bytes) { return defineClass(null, bytes, 0, bytes.length); }
+    }
+
+    @Test
+    void saturationGuardResolvesReleaseNamesWithoutOptionalMods() throws Exception {
+        String main = System.getProperty("ecpatches.releaseJar");
+        String test = System.getProperty("ecpatches.releaseTestJar");
+        assumeTrue(main != null && test != null, "Release artifacts not supplied");
+        FixtureLoader loader = new FixtureLoader();
+        loader.add(test, false);
+        loader.add(main, true);
+        Class<?> playerType = loader.loadClass("net.minecraft.entity.player.EntityPlayer");
+        Object player = playerType.newInstance();
+        Object stats = playerType.getMethod("func_71024_bL").invoke(player);
+        Method set = stats.getClass().getMethod("func_75119_b", float.class);
+        Method get = stats.getClass().getMethod("func_75115_e");
+        Class<?> guard = loader.loadClass("com.gberguy.ecpatches.runtime.SaturationGuardEvents");
+        Method shouldDraw = guard.getMethod("shouldDrawSaturation", playerType);
+        set.invoke(stats, -40.0F);
+        assertEquals(false, shouldDraw.invoke(null, player));
+        assertEquals(-40.0F, get.invoke(stats));
+        Class<?> tickType = loader.loadClass("net.minecraftforge.fml.common.gameevent.TickEvent$PlayerTickEvent");
+        Class<?> phase = loader.loadClass("net.minecraftforge.fml.common.gameevent.TickEvent$Phase");
+        Object tick = tickType.getConstructor(phase, playerType).newInstance(phase.getEnumConstants()[1], player);
+        Object handler = guard.getConstructor(PatchSettings.class)
+                .newInstance(PatchSettings.read(directory.resolve("saturation.cfg").toFile()));
+        Method onTick = guard.getMethod("onPlayerTick", tickType);
+        onTick.invoke(handler, tick);
+        assertEquals(0.0F, get.invoke(stats));
+        assertEquals(true, shouldDraw.invoke(null, player));
+        set.invoke(stats, 100.0F);
+        onTick.invoke(handler, tick);
+        assertEquals(100.0F, get.invoke(stats));
+        assertEquals(true, shouldDraw.invoke(null, player));
     }
 
     @Test

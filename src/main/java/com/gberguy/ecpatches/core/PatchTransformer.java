@@ -26,6 +26,7 @@ public final class PatchTransformer implements IClassTransformer {
         List<MethodPatch> modules = new ArrayList<>(Arrays.asList(new BloodArsenalPatch(), new RootsPatch(), new LycanitesMeleePatch(), new LycanitesGhostPatch(), new MorechidsPatch(), new WaystonesVillagePatch(), new WitcheryVillagesToroWallsPatch()));
         modules.addAll(Arrays.asList(GhostlyPatches.create()));
         modules.add(new NutritionLunchboxPatch());
+        modules.add(new ScalingFeastSaturationHudPatch());
         for (MethodPatch patch : modules) {
             String key = patch.className + "#" + patch.methodName + patch.descriptor;
             if (patches.put(key, patch) != null) {
