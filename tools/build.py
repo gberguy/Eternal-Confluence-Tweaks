@@ -39,7 +39,7 @@ def download(name):
     path = BUILD / "dependencies" / (name + ".jar")
     path.parent.mkdir(parents=True, exist_ok=True)
     if not path.exists() or hashlib.sha256(path.read_bytes()).hexdigest() != checksum:
-        request = urllib.request.Request(url, headers={"User-Agent": "EternalConfluenceTweaks-build/0.4.1"})
+        request = urllib.request.Request(url, headers={"User-Agent": "EternalConfluenceTweaks-build/0.4.2"})
         with urllib.request.urlopen(request, timeout=60) as response:
             data = response.read()
         if hashlib.sha256(data).hexdigest() != checksum:
@@ -61,6 +61,8 @@ def main():
     parser.add_argument("--patched-mods", type=Path)
     parser.add_argument("--ghostly-mods", type=Path)
     parser.add_argument("--waystones-jar", type=Path)
+    parser.add_argument("--nutrition-jar", type=Path, default=ROOT / "dev-libs/Nutrition-UEL-4.16.0.jar")
+    parser.add_argument("--spiceoflife-jar", type=Path, default=ROOT / "dev-libs/SpiceOfLife-mc1.12-1.3.12.jar")
     args = parser.parse_args()
     if bool(args.original_mods) != bool(args.patched_mods):
         parser.error("Provide both --original-mods and --patched-mods for fixture tests")
@@ -145,8 +147,11 @@ def main():
     for name, path in (("originalMods", args.original_mods), ("patchedMods", args.patched_mods),
                        ("ghostlyMods", args.ghostly_mods), ("waystonesJar", args.waystones_jar), ("minecraftMcp", minecraft_mcp), ("minecraftSrg", minecraft_srg),
                        ("releaseJar", main_srg), ("releaseTestJar", test_srg), ("ghostlyMcp", ghostly_mcp if args.ghostly_mods else None),
-                       ("witcheryWallsJar", dependencies["witchery-villages"])):
+                       ("witcheryWallsJar", dependencies["witchery-villages"]), ("forgeJar", forge_mcp)):
         if path:
+            command.append("-Decpatches." + name + "=" + str(path.resolve()))
+    for name, path in (("nutritionJar", args.nutrition_jar), ("spiceOfLifeJar", args.spiceoflife_jar)):
+        if path.is_file():
             command.append("-Decpatches." + name + "=" + str(path.resolve()))
     modern = []
     for artifact, checksum in MODERN_ASM.items():

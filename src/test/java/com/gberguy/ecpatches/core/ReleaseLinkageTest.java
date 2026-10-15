@@ -54,6 +54,28 @@ public class ReleaseLinkageTest {
     }
 
     @Test
+    void nutritionSnapshotResolvesReleaseNamesWithoutEitherOptionalMod() throws Exception {
+        String main = System.getProperty("ecpatches.releaseJar");
+        String test = System.getProperty("ecpatches.releaseTestJar");
+        assumeTrue(main != null && test != null, "Release artifacts not supplied");
+        FixtureLoader loader = new FixtureLoader();
+        loader.add(test, false);
+        loader.add(main, true);
+        Class<?> item = loader.loadClass("net.minecraft.item.Item");
+        Class<?> stack = loader.loadClass("net.minecraft.item.ItemStack");
+        Object original = stack.getConstructor(item, int.class, int.class).newInstance(item.newInstance(), 0, 4);
+        Class<?> hooks = loader.loadClass("com.gberguy.ecpatches.runtime.NutritionConsumedStack");
+        Method snapshot = hooks.getMethod("snapshot", stack);
+        Object result = snapshot.invoke(null, original);
+        assertNotSame(original, result);
+        assertEquals(0, stack.getMethod("func_190916_E").invoke(original));
+        assertEquals(1, stack.getMethod("func_190916_E").invoke(result));
+        assertEquals(4, stack.getMethod("func_77960_j").invoke(result));
+        Object empty = stack.getField("field_190927_a").get(null);
+        assertSame(empty, snapshot.invoke(null, empty));
+    }
+
+    @Test
     void releaseNamesResolveAndVanillaGuardRunsOnTheJvm() throws Exception {
         String main = System.getProperty("ecpatches.releaseJar");
         String test = System.getProperty("ecpatches.releaseTestJar");

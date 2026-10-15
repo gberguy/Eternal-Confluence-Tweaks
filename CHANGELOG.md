@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.4.2] - 2026-10-15
+
+### Fixed
+- Restored Nutrition UEL awards for food consumed from Spice of Life lunchboxes and lunchbags when the food stack is depleted.
+
 ## [0.4.1] - 2026-09-27
 
 ### Added
