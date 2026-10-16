@@ -48,19 +48,27 @@ public abstract class MethodPatch implements Opcodes {
         }
         String fingerprint = MethodFingerprint.of(method);
         if (Arrays.asList(fixedFingerprints).contains(fingerprint)) {
-            return Result.ALREADY_PRESENT;
+            return compatible(owner, true) ? Result.ALREADY_PRESENT : Result.UNSUPPORTED;
         }
-        if (!Arrays.asList(originalFingerprints).contains(fingerprint)) {
+        if (!Arrays.asList(originalFingerprints).contains(fingerprint) || !compatible(owner, false)) {
             return Result.UNSUPPORTED;
         }
-        edit(method, MinecraftNames.isDeobfuscated(method));
-        if (!Arrays.asList(fixedFingerprints).contains(MethodFingerprint.of(method))) {
+        edit(owner, method, MinecraftNames.isDeobfuscated(method));
+        if (!Arrays.asList(fixedFingerprints).contains(MethodFingerprint.of(method)) || !compatible(owner, true)) {
             throw new IllegalStateException("Unexpected patch output for " + id.key);
         }
         return Result.APPLIED;
     }
 
     protected abstract void edit(MethodNode method, boolean deobfuscated);
+
+    protected boolean compatible(ClassNode owner, boolean fixed) {
+        return true;
+    }
+
+    protected void edit(ClassNode owner, MethodNode method, boolean deobfuscated) {
+        edit(method, deobfuscated);
+    }
 
     public boolean enabled(PatchSettings settings) {
         return settings.enabled(id);

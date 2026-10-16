@@ -4,6 +4,7 @@ public enum PatchId {
     BLOOD_ARSENAL("bloodArsenalSlateItem", "bloodarsenal", "Blood Arsenal", "Fixes compressed slate variants having incorrect names, variant handling, and crafting recipe behavior."),
     ROOTS("rootsAirStateMatcher", "roots", "Roots", "Fixes Wildwood disappearing instead of converting correctly to Runed Wildwood."),
     NUTRITION_LUNCHBOX("nutritionSpiceOfLifeLastItem", "nutrition", "Nutrition UEL / Spice of Life", "Fixes missing nutrition when the last food in a Spice of Life lunchbox or lunchbag stack is consumed."),
+    VFP_FOOD("vanillaFoodPantryServings", "vanillafoodpantry", "Vanilla Food Pantry", "Fixes multi-use servings with expanded hunger and isolates temporary serving nutrition from other food queries."),
     PLAYER_SATURATION("clampNegativeSaturation", "minecraft", "Minecraft", "Resets negative player saturation to zero at the end of each player tick on the server and client, preserving positive values above 20."),
     SCALING_FEAST_SATURATION_HUD("scalingFeastSafeSaturationHud", "scalingfeast", "Scaling Feast", "Skips the saturation bar when player saturation is negative, preventing invalid colour indexing without disabling the saturation display."),
     LYCANITES_MELEE("lycanitesMeleeLineOfSight", "lycanitesmobs", "Lycanites Mobs", "Prevents Lycanites mobs from performing melee attacks through walls and other solid obstacles."),

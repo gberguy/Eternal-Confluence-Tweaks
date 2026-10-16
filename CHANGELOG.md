@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.5] - 2026-10-16
+
+### Fixed
+- Fixed Vanilla Food Pantry multi-use foods subtracting hunger and saturation above 20 hunger. Servings now respect AppleCore's per-player maximum hunger, and invalid or empty servings leave the food unchanged.
+- Fixed temporary VFP serving nutrition affecting unrelated food queries during consumption, which could lower Spice of Life: Carrot Edition progress and milestone health bonuses. Serving values now apply only to the consumed stack, with cleanup after nested consumption or event failures.
+- Added the independently configurable `vanillaFoodPantryServings` option, enabled by default. Preserves existing food NBT, portion rules, effects, containers, and dietary modifiers on client and server.
+
 ## [0.4.4] - 2026-10-16
 
 ### Fixed
