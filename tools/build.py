@@ -1,11 +1,14 @@
 import argparse
 import hashlib
+import http.client
 import json
 import os
 from pathlib import Path
 import re
 import shutil
 import subprocess
+import time
+import urllib.error
 import urllib.request
 import zipfile
 
@@ -40,10 +43,24 @@ def download(name):
     path.parent.mkdir(parents=True, exist_ok=True)
     if not path.exists() or hashlib.sha256(path.read_bytes()).hexdigest() != checksum:
         request = urllib.request.Request(url, headers={"User-Agent": "EternalConfluenceTweaks-build/0.4.4"})
-        with urllib.request.urlopen(request, timeout=60) as response:
-            data = response.read()
+        for attempt in range(1, 4):
+            print(f"Downloading {name} (attempt {attempt}/3): {url}", flush=True)
+            try:
+                with urllib.request.urlopen(request, timeout=60) as response:
+                    data = response.read()
+                break
+            except (urllib.error.URLError, TimeoutError, ConnectionError, http.client.IncompleteRead) as error:
+                retryable = not isinstance(error, urllib.error.HTTPError) or error.code in (
+                    404, 408, 429, 500, 502, 503, 504)
+                if not retryable or attempt == 3:
+                    raise RuntimeError(
+                        f"Failed to download dependency {name} from {url} (attempt {attempt}/3): {error}"
+                    ) from error
+                delay = 2 ** attempt
+                print(f"Download failed for {name}: {error}; retrying in {delay} seconds.", flush=True)
+                time.sleep(delay)
         if hashlib.sha256(data).hexdigest() != checksum:
-            raise RuntimeError("Dependency checksum mismatch: " + name)
+            raise RuntimeError(f"Dependency checksum mismatch: {name} from {url}")
         path.write_bytes(data)
     return path
 
