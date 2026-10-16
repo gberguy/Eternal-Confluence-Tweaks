@@ -39,7 +39,7 @@ def download(name):
     path = BUILD / "dependencies" / (name + ".jar")
     path.parent.mkdir(parents=True, exist_ok=True)
     if not path.exists() or hashlib.sha256(path.read_bytes()).hexdigest() != checksum:
-        request = urllib.request.Request(url, headers={"User-Agent": "EternalConfluenceTweaks-build/0.4.3"})
+        request = urllib.request.Request(url, headers={"User-Agent": "EternalConfluenceTweaks-build/0.4.4"})
         with urllib.request.urlopen(request, timeout=60) as response:
             data = response.read()
         if hashlib.sha256(data).hexdigest() != checksum:

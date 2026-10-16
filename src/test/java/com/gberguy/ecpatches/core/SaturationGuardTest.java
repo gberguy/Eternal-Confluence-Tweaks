@@ -5,6 +5,7 @@ import com.gberguy.ecpatches.runtime.SaturationGuardEvents;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -39,31 +40,44 @@ public class SaturationGuardTest implements Opcodes {
         FoodStats stats = player.getFoodStats();
         SaturationGuardEvents handler = new SaturationGuardEvents(settings(""));
         for (float saturation : new float[]{-Float.MIN_VALUE, -0.5F, -20, -40, -60, -Float.MAX_VALUE}) {
-            stats.setFoodSaturationLevel(saturation);
-            int writes = stats.saturationWrites;
+            setSaturation(stats, saturation);
             handler.onPlayerTick(new TickEvent.PlayerTickEvent(TickEvent.Phase.START, player));
             assertEquals(saturation, stats.getSaturationLevel());
-            assertEquals(writes, stats.saturationWrites);
             handler.onPlayerTick(new TickEvent.PlayerTickEvent(TickEvent.Phase.END, player));
             assertEquals(0.0F, stats.getSaturationLevel());
-            assertEquals(writes + 1, stats.saturationWrites);
             handler.onPlayerTick(new TickEvent.PlayerTickEvent(TickEvent.Phase.END, player));
-            assertEquals(writes + 1, stats.saturationWrites);
+            assertEquals(0.0F, stats.getSaturationLevel());
         }
     }
 
     @Test
-    void preservesNonnegativeSaturationWithoutWritingOrCappingIt() throws Exception {
+    void preservesNonnegativeSaturationWithoutCappingIt() throws Exception {
         EntityPlayer player = new EntityPlayer();
         SaturationGuardEvents handler = new SaturationGuardEvents(settings(""));
         for (float saturation : new float[]{-0.0F, 0, Float.MIN_VALUE, 0.5F, 20, 25, 100, Float.MAX_VALUE}) {
-            player.getFoodStats().setFoodSaturationLevel(saturation);
-            int writes = player.getFoodStats().saturationWrites;
+            setSaturation(player.getFoodStats(), saturation);
             handler.onPlayerTick(new TickEvent.PlayerTickEvent(TickEvent.Phase.END, player));
             assertEquals(Float.floatToIntBits(saturation), Float.floatToIntBits(player.getFoodStats().getSaturationLevel()));
-            assertEquals(writes, player.getFoodStats().saturationWrites);
             assertTrue(SaturationGuardEvents.shouldDrawSaturation(player));
         }
+    }
+
+    @Test
+    void correctionPreservesHungerExhaustionAndTimersWithoutAClientSetter() throws Exception {
+        FoodStats.class.getDeclaredMethod("getSaturationLevel");
+        assertThrows(NoSuchMethodException.class, () -> FoodStats.class.getDeclaredMethod("setFoodSaturationLevel", float.class));
+        EntityPlayer player = new EntityPlayer();
+        FoodStats stats = player.getFoodStats();
+        Map<Field, Object> before = new HashMap<>();
+        for (Field field : FoodStats.class.getDeclaredFields()) {
+            if (field.getName().equals("foodSaturationLevel")) continue;
+            field.setAccessible(true);
+            before.put(field, field.get(stats));
+        }
+        setSaturation(stats, -40.0F);
+        new SaturationGuardEvents(settings("")).onPlayerTick(new TickEvent.PlayerTickEvent(TickEvent.Phase.END, player));
+        assertEquals(0.0F, stats.getSaturationLevel());
+        for (Map.Entry<Field, Object> entry : before.entrySet()) assertEquals(entry.getValue(), entry.getKey().get(stats));
     }
 
     @Test
@@ -81,7 +95,7 @@ public class SaturationGuardTest implements Opcodes {
                 byte[] output = new PatchTransformer(settings).transform(PATCH.className, PATCH.className, original);
                 assertEquals(hud, output != original);
                 EntityPlayer player = new EntityPlayer();
-                player.getFoodStats().setFoodSaturationLevel(-40);
+                setSaturation(player.getFoodStats(), -40);
                 new SaturationGuardEvents(settings).onPlayerTick(new TickEvent.PlayerTickEvent(TickEvent.Phase.END, player));
                 assertEquals(clamp ? 0.0F : -40.0F, player.getFoodStats().getSaturationLevel());
             }
@@ -91,7 +105,7 @@ public class SaturationGuardTest implements Opcodes {
     @Test
     void disabledCorrectionLeavesNegativeStateUntouchedWithoutOptionalMods() throws Exception {
         EntityPlayer player = new EntityPlayer();
-        player.getFoodStats().setFoodSaturationLevel(-60);
+        setSaturation(player.getFoodStats(), -60);
         SaturationGuardEvents handler = new SaturationGuardEvents(settings("clampNegativeSaturation=false\n"));
         handler.onPlayerTick(new TickEvent.PlayerTickEvent(TickEvent.Phase.END, player));
         assertEquals(-60.0F, player.getFoodStats().getSaturationLevel());
@@ -131,7 +145,7 @@ public class SaturationGuardTest implements Opcodes {
         Class<?> fixed = harness(true);
         EntityPlayer player = new EntityPlayer();
         for (float saturation : new float[]{-40, -60}) {
-            player.getFoodStats().setFoodSaturationLevel(saturation);
+            setSaturation(player.getFoodStats(), saturation);
             int[] draws = {0};
             assertThrows(IndexOutOfBoundsException.class, () -> dispatch(original, player, draws));
             assertEquals(1, draws[0]);
@@ -142,7 +156,7 @@ public class SaturationGuardTest implements Opcodes {
             assertEquals(false, invoke(fixed.getMethod("shouldDrawLower", Object.class, EntityPlayer.class), null, player));
         }
         for (float saturation : new float[]{-Float.MIN_VALUE, -0.5F, -20, -Float.MAX_VALUE}) {
-            player.getFoodStats().setFoodSaturationLevel(saturation);
+            setSaturation(player.getFoodStats(), saturation);
             int[] draws = {0};
             dispatch(fixed, player, draws);
             assertEquals(0, draws[0]);
@@ -157,7 +171,7 @@ public class SaturationGuardTest implements Opcodes {
         fixed.getField("SAT_COLOURS").set(null, palette);
         EntityPlayer player = new EntityPlayer();
         for (float saturation : new float[]{0, 0.5F, 19.9F, 20, 20.01F, 25, 40, 100, 140, 160}) {
-            player.getFoodStats().setFoodSaturationLevel(saturation);
+            setSaturation(player.getFoodStats(), saturation);
             int[] draws = {0};
             dispatch(fixed, player, draws);
             assertEquals(1, draws[0]);
@@ -254,6 +268,12 @@ public class SaturationGuardTest implements Opcodes {
         }.define();
         result.getField("SAT_COLOURS").set(null, Arrays.asList(new Object(), new Object(), new Object(), new Object(), new Object(), new Object(), new Object()));
         return result;
+    }
+
+    private static void setSaturation(FoodStats stats, float value) throws Exception {
+        Field field = FoodStats.class.getDeclaredField("foodSaturationLevel");
+        field.setAccessible(true);
+        field.setFloat(stats, value);
     }
 
     private PatchSettings settings(String contents) throws Exception {

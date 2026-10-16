@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.4.4] - 2026-10-16
+
+### Fixed
+- Fixed dedicated-server disconnects and repeated login failures when correcting negative player saturation. The safeguard now accesses the shared saturation field instead of calling a client-only Minecraft method.
+- Added error handling for saturation field access failures so they are logged without throwing from the player tick handler.
+
 ## [0.4.3] - 2026-10-15
 
 ### Fixed

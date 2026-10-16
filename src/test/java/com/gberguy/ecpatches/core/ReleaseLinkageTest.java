@@ -7,6 +7,8 @@ import java.util.*;
 import java.util.jar.JarFile;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.objectweb.asm.*;
 import org.objectweb.asm.tree.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -52,24 +54,141 @@ public class ReleaseLinkageTest {
         }
 
         Class<?> define(byte[] bytes) { return defineClass(null, bytes, 0, bytes.length); }
+
+        void useServerFoodStats(String path) throws Exception {
+            try (JarFile jar = new JarFile(path);
+                 java.io.InputStream input = jar.getInputStream(jar.getJarEntry("net/minecraft/util/FoodStats.class"))) {
+                ClassNode node = new ClassNode();
+                new ClassReader(input).accept(node, 0);
+                assertTrue(node.methods.stream().noneMatch(value -> ((MethodNode) value).name.equals("func_75119_b")));
+                node.methods.removeIf(value -> {
+                    MethodNode method = (MethodNode) value;
+                    return !method.name.equals("<init>") && !method.name.equals("func_75115_e");
+                });
+                ClassWriter writer = new ClassWriter(0);
+                node.accept(writer);
+                definitions.put("net.minecraft.util.FoodStats", writer.toByteArray());
+            }
+        }
+
+        void changeFoodStats(boolean clientSetter, String fieldName) {
+            ClassNode node = new ClassNode();
+            new ClassReader(definitions.get("net.minecraft.util.FoodStats")).accept(node, 0);
+            for (Object value : node.fields) {
+                FieldNode field = (FieldNode) value;
+                if (field.name.equals("field_75125_b")) field.name = fieldName;
+            }
+            for (Object value : node.methods) {
+                for (AbstractInsnNode instruction : ((MethodNode) value).instructions.toArray()) {
+                    if (instruction instanceof FieldInsnNode) {
+                        FieldInsnNode field = (FieldInsnNode) instruction;
+                        if (field.name.equals("field_75125_b")) field.name = fieldName;
+                    }
+                }
+            }
+            if (clientSetter) {
+                MethodNode setter = new MethodNode(Opcodes.ACC_PUBLIC, "func_75119_b", "(F)V", null, null);
+                setter.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
+                setter.instructions.add(new VarInsnNode(Opcodes.FLOAD, 1));
+                setter.instructions.add(new FieldInsnNode(Opcodes.PUTFIELD, node.name, fieldName, "F"));
+                setter.instructions.add(new InsnNode(Opcodes.RETURN));
+                node.methods.add(setter);
+            }
+            ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+            node.accept(writer);
+            definitions.put("net.minecraft.util.FoodStats", writer.toByteArray());
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void saturationGuardResolvesReleaseNamesWithoutOptionalMods(boolean clientSetter) throws Exception {
+        FixtureLoader loader = saturationLoader();
+        loader.changeFoodStats(clientSetter, "field_75125_b");
+        if (!clientSetter) assertOldSetterFails(loader);
+        verifySaturationGuard(loader);
     }
 
     @Test
-    void saturationGuardResolvesReleaseNamesWithoutOptionalMods() throws Exception {
+    void saturationGuardRunsAgainstReleasedDedicatedServerFoodStats() throws Exception {
+        String server = System.getProperty("ecpatches.minecraftServerSrg");
+        assumeTrue(server != null, "Dedicated server binary not supplied");
+        FixtureLoader loader = saturationLoader();
+        loader.useServerFoodStats(server);
+        assertOldSetterFails(loader);
+        verifySaturationGuard(loader);
+    }
+
+    @Test
+    void unavailableSaturationFieldDoesNotBreakTickOrReadOnlyHud() throws Exception {
+        FixtureLoader loader = saturationLoader();
+        loader.changeFoodStats(false, "unrecognizedSaturation");
+        Class<?> playerType = loader.loadClass("net.minecraft.entity.player.EntityPlayer");
+        Object player = playerType.newInstance();
+        Object stats = playerType.getMethod("func_71024_bL").invoke(player);
+        Field field = stats.getClass().getDeclaredField("unrecognizedSaturation");
+        field.setAccessible(true);
+        field.setFloat(stats, -40.0F);
+        Class<?> guard = loader.loadClass("com.gberguy.ecpatches.runtime.SaturationGuardEvents");
+        Object handler = guard.getConstructor(PatchSettings.class)
+                .newInstance(PatchSettings.read(directory.resolve("missing-field.cfg").toFile()));
+        Class<?> tickType = loader.loadClass("net.minecraftforge.fml.common.gameevent.TickEvent$PlayerTickEvent");
+        Class<?> phase = loader.loadClass("net.minecraftforge.fml.common.gameevent.TickEvent$Phase");
+        Object tick = tickType.getConstructor(phase, playerType).newInstance(phase.getEnumConstants()[1], player);
+        for (int i = 0; i < 2; i++) guard.getMethod("onPlayerTick", tickType).invoke(handler, tick);
+        assertEquals(-40.0F, field.getFloat(stats));
+        assertEquals(false, guard.getMethod("shouldDrawSaturation", playerType).invoke(null, player));
+        Field cached = loader.loadClass(guard.getName() + "$SaturationField").getDeclaredField("field");
+        cached.setAccessible(true);
+        assertNull(cached.get(null));
+    }
+
+    private FixtureLoader saturationLoader() throws Exception {
         String main = System.getProperty("ecpatches.releaseJar");
         String test = System.getProperty("ecpatches.releaseTestJar");
         assumeTrue(main != null && test != null, "Release artifacts not supplied");
         FixtureLoader loader = new FixtureLoader();
         loader.add(test, false);
         loader.add(main, true);
+        return loader;
+    }
+
+    private static void assertOldSetterFails(FixtureLoader loader) throws Exception {
+        Class<?> stats = loader.loadClass("net.minecraft.util.FoodStats");
+        assertThrows(NoSuchMethodException.class, () -> stats.getMethod("func_75119_b", float.class));
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC, "OldSaturationSetter", null, "java/lang/Object", null);
+        MethodVisitor method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "clear",
+                "(Lnet/minecraft/util/FoodStats;)V", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitInsn(Opcodes.FCONST_0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "net/minecraft/util/FoodStats", "func_75119_b", "(F)V", false);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+        Method clear = loader.define(writer.toByteArray()).getMethod("clear", stats);
+        InvocationTargetException error = assertThrows(InvocationTargetException.class, () -> clear.invoke(null, stats.newInstance()));
+        assertTrue(error.getCause() instanceof NoSuchMethodError);
+    }
+
+    private void verifySaturationGuard(FixtureLoader loader) throws Exception {
         Class<?> playerType = loader.loadClass("net.minecraft.entity.player.EntityPlayer");
         Object player = playerType.newInstance();
         Object stats = playerType.getMethod("func_71024_bL").invoke(player);
-        Method set = stats.getClass().getMethod("func_75119_b", float.class);
+        Field saturation = stats.getClass().getDeclaredField("field_75125_b");
+        saturation.setAccessible(true);
         Method get = stats.getClass().getMethod("func_75115_e");
+        Map<Field, Object> before = new HashMap<>();
+        for (Field field : stats.getClass().getDeclaredFields()) {
+            if (field.equals(saturation)) continue;
+            field.setAccessible(true);
+            before.put(field, field.get(stats));
+        }
         Class<?> guard = loader.loadClass("com.gberguy.ecpatches.runtime.SaturationGuardEvents");
         Method shouldDraw = guard.getMethod("shouldDrawSaturation", playerType);
-        set.invoke(stats, -40.0F);
+        saturation.setFloat(stats, -40.0F);
         assertEquals(false, shouldDraw.invoke(null, player));
         assertEquals(-40.0F, get.invoke(stats));
         Class<?> tickType = loader.loadClass("net.minecraftforge.fml.common.gameevent.TickEvent$PlayerTickEvent");
@@ -81,10 +200,11 @@ public class ReleaseLinkageTest {
         onTick.invoke(handler, tick);
         assertEquals(0.0F, get.invoke(stats));
         assertEquals(true, shouldDraw.invoke(null, player));
-        set.invoke(stats, 100.0F);
+        saturation.setFloat(stats, 100.0F);
         onTick.invoke(handler, tick);
         assertEquals(100.0F, get.invoke(stats));
         assertEquals(true, shouldDraw.invoke(null, player));
+        for (Map.Entry<Field, Object> entry : before.entrySet()) assertEquals(entry.getValue(), entry.getKey().get(stats));
     }
 
     @Test
