@@ -58,6 +58,10 @@ public class PatchSettingsTest {
                 + "# Set each fix to true or false. Changes require a full game/server restart.\n"
                 + "# Target: Lycanites Mobs / Corail Tombstone\n"
                 + "# Prevents targeting players with tombstone:ghostly_shape. Does nothing special when that potion is absent. Tested with Lycanites Mobs 1.12.2-2.0.8.10.\n"
+                + "# Target: Nutrition UEL / Spice of Life\n"
+                + "# Fixes missing nutrition when the last food in a Spice of Life lunchbox or lunchbag stack is consumed.\n"
+                + "# Makes mobs from enabled mods ignore players affected by Ghostly Shape, including players they already targeted.\n"
+                + "# villageWaystoneWeight accepts positive integer weights from 1 to 1000000. Higher weights make village Waystones more common. Waystones default is 3.\n"
                 + "lycanitesGhostlyShape=false\nrootsAirStateMatcher=false\n# My custom note\nfutureOption=keep\n";
         Files.write(file, old.getBytes(StandardCharsets.UTF_8));
         PatchSettings options = PatchSettings.read(file.toFile());
@@ -74,6 +78,10 @@ public class PatchSettingsTest {
         assertTrue(rendered.contains("# My custom note\nfutureOption=keep"));
         assertFalse(rendered.contains("Tested with"));
         assertFalse(rendered.contains("Set each fix"));
+        assertFalse(rendered.contains("# Target: Nutrition UEL / Spice of Life"));
+        assertFalse(rendered.contains("# Fixes missing nutrition when the last food in a Spice of Life lunchbox or lunchbag stack is consumed."));
+        assertFalse(rendered.contains("including players they already targeted"));
+        assertFalse(rendered.contains("villageWaystoneWeight accepts"));
         PatchSettings.read(file.toFile());
         assertEquals(rendered, new String(Files.readAllBytes(file), StandardCharsets.UTF_8));
     }

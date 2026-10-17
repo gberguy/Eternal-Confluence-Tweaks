@@ -101,11 +101,24 @@ public final class PatchSettings {
     private static String render(Properties properties, String original) throws IOException {
         String ghostHeader = "# Corail Tombstone - Ghostly Shape Compatibility";
         String ghostDescription = "# Makes mobs from enabled mods ignore players affected by Ghostly Shape, including players they already targeted.";
-        String weightDescription = "# villageWaystoneWeight accepts positive integer weights from 1 to 1000000. Higher weights make village Waystones more common. Waystones default is 3.";
-        String vfpTested = "# Tested ver: vanillafoodpantry-mc1.12.2-4.3.1, AppleCore-mc1.12.2-3.4.0";
-        String vfpCarrotTested = vfpTested + ", solcarrot-1.12.2-1.8.4";
+        String weightDescription = "# Sets the village Waystone selection weight used by the tweak above. Higher values make Waystones more likely to be selected. Range: 1-1000000. Default: 100. Original Waystones weight: 3.";
         Set<String> generated = new HashSet<>(Arrays.asList(
-                "# Eternal Confluence Tweaks", "# General Fixes", ghostHeader, ghostDescription, weightDescription, vfpTested, vfpCarrotTested,
+                "# Eternal Confluence Tweaks", "# General Fixes", ghostHeader, ghostDescription, weightDescription,
+                "# villageWaystoneWeight accepts positive integer weights from 1 to 1000000. Higher weights make village Waystones more common. Waystones default is 3.",
+                "# Target: Nutrition UEL / Spice of Life",
+                "# Target: Ancient Spellcraft",
+                "# Target: ToroQuest",
+                "# Target: Electroblob's Wizardry",
+                "# Fixes compressed slate variants having incorrect names, variant handling, and crafting recipe behavior.",
+                "# Fixes Wildwood disappearing instead of converting correctly to Runed Wildwood.",
+                "# Fixes missing nutrition when the last food in a Spice of Life lunchbox or lunchbag stack is consumed.",
+                "# Resets negative player saturation to zero at the end of each player tick on the server and client, preserving positive values above 20.",
+                "# Skips the saturation bar when player saturation is negative, preventing invalid colour indexing without disabling the saturation display.",
+                "# Prevents Lycanites mobs from performing melee attacks through walls and other solid obstacles.",
+                "# Fixes a startup crash when MoreChids generates custom Orechid classes.",
+                "# Set waystonesVillageWeight to false to disable this tweak.",
+                "# Replaces Witchery Villages guards with ToroQuest guards in active Provinces and suppresses them in Provinces without a Lord.",
+                "# Expands Witchery Villages wall footprints around ToroQuest village structures when both mods are installed.",
                 "# Set each fix to true or false. Changes require a full game/server restart.",
                 "# Target: Lycanites Mobs / Corail Tombstone",
                 "# Target: Vanilla Food Pantry",
@@ -132,6 +145,7 @@ public final class PatchSettings {
         for (PatchId id : PatchId.values()) {
             keys.add(id.key);
             generated.add("# Target: " + id.modName);
+            generated.add("# Tested ver: " + id.testedVersions);
             if (!id.description.isEmpty()) generated.add("# " + id.description);
         }
         StringBuilder retained = new StringBuilder();
@@ -150,12 +164,11 @@ public final class PatchSettings {
         if (logical.length() > 0) retained.append(logical);
         StringBuilder output = new StringBuilder("# Eternal Confluence Tweaks\n\n# General Fixes\n");
         for (boolean ghostly : new boolean[]{false, true}) {
-            if (ghostly) output.append('\n').append(ghostHeader).append('\n').append(ghostDescription).append('\n');
+            if (ghostly) output.append('\n').append(ghostHeader).append('\n');
             for (PatchId id : PatchId.values()) {
                 if (id.ghostly() != ghostly) continue;
                 output.append("\n# Target: ").append(id.modName).append('\n');
-                if (id == PatchId.VFP_FOOD) output.append(vfpTested).append('\n');
-                if (id == PatchId.VFP_FOOD_VALUES) output.append(vfpCarrotTested).append('\n');
+                output.append("# Tested ver: ").append(id.testedVersions).append('\n');
                 if (!id.description.isEmpty()) output.append("# ").append(id.description).append('\n');
                 String value = properties.getProperty(id.key, "true").trim().replace("\\", "\\\\").replace("\n", "\\n").replace("\r", "\\r");
                 output.append(id.key).append('=').append(value).append('\n');

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.7] - 2026-10-16
+
+### Changed
+- Standardized every generated config entry with its target mods, tested versions, and a single-line description. Simplified the Ghostly Shape descriptions and clarified the Waystones weight setting.
+- Existing configs refresh their generated comments on launch while preserving toggle values, village weight, custom notes, and unknown options. No manual config deletion is needed.
+- Reorganized the README into a section for each tweak, with a plain-language description followed by an implementation summary, mod requirements, tested versions, and config keys.
+
 ## [0.4.6] - 2026-10-16
 
 ### Changed
