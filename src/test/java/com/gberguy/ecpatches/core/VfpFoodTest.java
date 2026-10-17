@@ -1,6 +1,7 @@
 package com.gberguy.ecpatches.core;
 
 import com.gberguy.ecpatches.core.patches.VfpFoodPatch;
+import com.gberguy.ecpatches.core.patches.VfpFoodValuesPatch;
 import java.io.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -30,6 +31,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class VfpFoodTest implements Opcodes {
     private static final VfpFoodPatch PATCH = new VfpFoodPatch();
+    private static final VfpFoodValuesPatch VALUES_PATCH = new VfpFoodValuesPatch();
     private static final String OWNER = PATCH.className.replace('.', '/');
     private static final String HELPER = "com/gberguy/ecpatches/runtime/VfpFoodValues";
     @TempDir Path directory;
@@ -42,13 +44,14 @@ public class VfpFoodTest implements Opcodes {
     }
 
     @Test
-    void exactReleaseTransformsAtomicallyOnceAndPreservesUnrelatedMethods() throws Exception {
+    void exactReleaseTransformsEachFixOnceAndPreservesUnrelatedMethods() throws Exception {
         byte[] input = fixture("vfpJar", OWNER);
         ClassNode original = node(input);
         byte[] output = transformer("").transform(PATCH.className, PATCH.className, input);
         assertNotSame(input, output);
         new ClassReader(output).accept(new CheckClassAdapter(new ClassWriter(0), true), 0);
         assertEquals(MethodPatch.Result.ALREADY_PRESENT, PATCH.apply(node(output)));
+        assertEquals(MethodPatch.Result.ALREADY_PRESENT, VALUES_PATCH.apply(node(output)));
         assertSame(output, transformer("").transform(PATCH.className, PATCH.className, output));
         assertSame(input, transformer("vanillaFoodPantryServings=false\n").transform(PATCH.className, PATCH.className, input));
         for (Object value : original.methods) {
@@ -66,10 +69,13 @@ public class VfpFoodTest implements Opcodes {
             ClassNode changed = node(input);
             find(changed, name).instructions.insert(new InsnNode(NOP));
             byte[] bytes = bytes(changed);
-            assertSame(bytes, transformer("").transform(PATCH.className, PATCH.className, bytes));
+            MethodPatch patch = name.equals("func_77654_b") ? PATCH : VALUES_PATCH;
+            assertEquals(MethodPatch.Result.UNSUPPORTED, patch.apply(changed));
+            assertArrayEquals(bytes, bytes(changed));
             changed.methods.remove(find(changed, name));
             bytes = bytes(changed);
-            assertSame(bytes, transformer("").transform(PATCH.className, PATCH.className, bytes));
+            assertEquals(MethodPatch.Result.UNSUPPORTED, patch.apply(changed));
+            assertArrayEquals(bytes, bytes(changed));
         }
     }
 
@@ -78,16 +84,81 @@ public class VfpFoodTest implements Opcodes {
         ClassNode source = node(fixture("vfpJar", OWNER));
         development(source);
         assertEquals(MethodPatch.Result.APPLIED, PATCH.apply(source));
+        assertEquals(MethodPatch.Result.APPLIED, VALUES_PATCH.apply(source));
         assertEquals(MethodPatch.Result.ALREADY_PRESENT, PATCH.apply(source));
+        assertEquals(MethodPatch.Result.ALREADY_PRESENT, VALUES_PATCH.apply(source));
         new ClassReader(bytes(source)).accept(new CheckClassAdapter(new ClassWriter(0), true), 0);
         Path config = directory.resolve("options.cfg");
         Files.write(config, "vanillaFoodPantryServings=false\nclampNegativeSaturation=false\n".getBytes(StandardCharsets.UTF_8));
         PatchSettings settings = PatchSettings.read(config.toFile());
         assertFalse(settings.enabled(PatchId.VFP_FOOD));
+        assertFalse(settings.enabled(PatchId.VFP_FOOD_VALUES));
         assertFalse(settings.enabled(PatchId.PLAYER_SATURATION));
         assertTrue(settings.enabled(PatchId.NUTRITION_LUNCHBOX));
         assertTrue(settings.enabled(PatchId.SCALING_FEAST_SATURATION_HUD));
         assertFalse(PatchSettings.read(config.toFile()).enabled(PatchId.VFP_FOOD));
+    }
+
+    @Test
+    void allFourToggleCombinationsTransformOnlyTheirOwnMethodsAndSurviveConfigRewrite() throws Exception {
+        byte[] original = fixture("vfpJar", OWNER);
+        for (boolean hunger : new boolean[]{false, true}) {
+            for (boolean values : new boolean[]{false, true}) {
+                String text = "vanillaFoodPantryServings=" + hunger + "\nvanillaFoodPantryFoodValues=" + values + "\n";
+                Path config = directory.resolve("matrix-" + hunger + "-" + values + ".cfg");
+                Files.write(config, text.getBytes(StandardCharsets.UTF_8));
+                PatchSettings settings = PatchSettings.read(config.toFile());
+                PatchSettings reread = PatchSettings.read(config.toFile());
+                assertEquals(hunger, reread.enabled(PatchId.VFP_FOOD));
+                assertEquals(values, reread.enabled(PatchId.VFP_FOOD_VALUES));
+                byte[] output = new PatchTransformer(settings).transform(PATCH.className, PATCH.className, original);
+                ClassNode result = node(output);
+                for (String name : Arrays.asList("func_77654_b", "getFoodValues", "onPortionConsumed")) {
+                    boolean changed = !MethodFingerprint.of(find(node(original), name)).equals(MethodFingerprint.of(find(result, name)));
+                    assertEquals(name.equals("func_77654_b") ? hunger : values, changed, text + name);
+                }
+                assertSame(output, new PatchTransformer(settings).transform(PATCH.className, PATCH.className, output));
+                Harness harness = harness(hunger, values, true);
+                Player player = new Player();
+                player.stats.level = 24;
+                player.maximum = 30;
+                harness.finish(food(harness.pantry, 14, 5, 0), player);
+                assertEquals(hunger ? 6 : -4, player.stats.lastHunger);
+                Player smallServing = new Player();
+                smallServing.stats.level = 19;
+                ItemStack history = food(harness.pantry, 14, 5, 0);
+                smallServing.stats.during = (food, consumed) -> assertEquals(values, harness.hearty(history));
+                harness.finish(food(harness.pantry, 14, 5, 0), smallServing);
+                assertEquals(1, smallServing.stats.lastHunger);
+            }
+        }
+    }
+
+    @Test
+    void unsupportedNutritionPairDoesNotPreventHungerFixAndViceVersa() throws Exception {
+        for (String name : Arrays.asList("func_77654_b", "getFoodValues", "onPortionConsumed")) {
+            ClassNode changed = node(fixture("vfpJar", OWNER));
+            find(changed, name).instructions.insert(new InsnNode(NOP));
+            boolean hungerChanged = name.equals("func_77654_b");
+            assertEquals(hungerChanged ? MethodPatch.Result.UNSUPPORTED : MethodPatch.Result.APPLIED, PATCH.apply(changed));
+            assertEquals(hungerChanged ? MethodPatch.Result.APPLIED : MethodPatch.Result.UNSUPPORTED, VALUES_PATCH.apply(changed));
+        }
+    }
+
+    @Test
+    void legacyDisabledSwitchKeepsBothFixesDisabledUntilExplicitlyConfigured() throws Exception {
+        Path config = directory.resolve("legacy.cfg");
+        Files.write(config, ("# Target: Vanilla Food Pantry\n"
+                + "# Fixes multi-use servings with expanded hunger and isolates temporary serving nutrition from other food queries.\n"
+                + "vanillaFoodPantryServings=false\n").getBytes(StandardCharsets.UTF_8));
+        PatchSettings settings = PatchSettings.read(config.toFile());
+        assertFalse(settings.enabled(PatchId.VFP_FOOD));
+        assertFalse(settings.enabled(PatchId.VFP_FOOD_VALUES));
+        String rendered = new String(Files.readAllBytes(config), StandardCharsets.UTF_8);
+        assertTrue(rendered.contains("vanillaFoodPantryFoodValues=false"));
+        assertFalse(rendered.contains("expanded hunger and isolates"));
+        PatchSettings.read(config.toFile());
+        assertEquals(rendered, new String(Files.readAllBytes(config), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -388,6 +459,10 @@ public class VfpFoodTest implements Opcodes {
     private Harness harness(boolean patched) throws Exception { return harness(patched, true); }
 
     private Harness harness(boolean patched, boolean api) throws Exception {
+        return harness(patched, patched, api);
+    }
+
+    private Harness harness(boolean hunger, boolean values, boolean api) throws Exception {
         Map<String, String> types = new HashMap<>();
         types.put(OWNER, "VfpPantryHarness");
         types.put("net/minecraft/entity/player/EntityPlayer", Type.getInternalName(Player.class));
@@ -420,7 +495,8 @@ public class VfpFoodTest implements Opcodes {
             loader.add(apiType);
         }
         ClassNode source = node(fixture("vfpJar", OWNER));
-        if (patched) assertEquals(MethodPatch.Result.APPLIED, PATCH.apply(source));
+        if (hunger) assertEquals(MethodPatch.Result.APPLIED, PATCH.apply(source));
+        if (values) assertEquals(MethodPatch.Result.APPLIED, VALUES_PATCH.apply(source));
         development(source);
         source.methods.removeIf(value -> !affected(((MethodNode) value).name));
         source.fields.clear();

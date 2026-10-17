@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.6] - 2026-10-16
+
+### Changed
+- Split the VFP fixes into two independent settings: `vanillaFoodPantryServings` for hunger restoration above 20, and `vanillaFoodPantryFoodValues` for Spice of Life: Carrot Edition tasted-foods progress. Both default to enabled; existing choices from the combined option are preserved when adding the new setting.
+- Updated both VFP config entries with clearer descriptions, the target mod combinations, and tested version information. Existing generated comments are replaced without changing user toggle values.
+- Added plain-language and technical README explanations of both VFP fixes, their intended EC compatibility cases, and how they interact.
+
 ## [0.4.5] - 2026-10-16
 
 ### Fixed

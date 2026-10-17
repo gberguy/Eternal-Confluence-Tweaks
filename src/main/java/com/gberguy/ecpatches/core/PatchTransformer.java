@@ -27,6 +27,7 @@ public final class PatchTransformer implements IClassTransformer {
         modules.addAll(Arrays.asList(GhostlyPatches.create()));
         modules.add(new NutritionLunchboxPatch());
         modules.add(new VfpFoodPatch());
+        modules.add(new VfpFoodValuesPatch());
         modules.add(new ScalingFeastSaturationHudPatch());
         for (MethodPatch patch : modules) {
             String key = patch.className + "#" + patch.methodName + patch.descriptor;

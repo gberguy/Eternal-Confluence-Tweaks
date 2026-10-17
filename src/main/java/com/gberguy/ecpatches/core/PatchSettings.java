@@ -49,6 +49,9 @@ public final class PatchSettings {
         try {
             String original = file.exists() ? new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8) : "";
             properties.load(new StringReader(original));
+            if (!properties.containsKey(PatchId.VFP_FOOD_VALUES.key) && properties.containsKey(PatchId.VFP_FOOD.key)) {
+                properties.setProperty(PatchId.VFP_FOOD_VALUES.key, properties.getProperty(PatchId.VFP_FOOD.key));
+            }
             for (PatchId id : PatchId.values()) {
                 String value = properties.getProperty(id.key);
                 if (value == null) {
@@ -99,10 +102,26 @@ public final class PatchSettings {
         String ghostHeader = "# Corail Tombstone - Ghostly Shape Compatibility";
         String ghostDescription = "# Makes mobs from enabled mods ignore players affected by Ghostly Shape, including players they already targeted.";
         String weightDescription = "# villageWaystoneWeight accepts positive integer weights from 1 to 1000000. Higher weights make village Waystones more common. Waystones default is 3.";
+        String vfpTested = "# Tested ver: vanillafoodpantry-mc1.12.2-4.3.1, AppleCore-mc1.12.2-3.4.0";
+        String vfpCarrotTested = vfpTested + ", solcarrot-1.12.2-1.8.4";
         Set<String> generated = new HashSet<>(Arrays.asList(
-                "# Eternal Confluence Tweaks", "# General Fixes", ghostHeader, ghostDescription, weightDescription,
+                "# Eternal Confluence Tweaks", "# General Fixes", ghostHeader, ghostDescription, weightDescription, vfpTested, vfpCarrotTested,
                 "# Set each fix to true or false. Changes require a full game/server restart.",
                 "# Target: Lycanites Mobs / Corail Tombstone",
+                "# Target: Vanilla Food Pantry",
+                "# Fixes multi-use servings with expanded hunger and isolates temporary serving nutrition from other food queries.",
+                "# Target: Vanilla Food Pantry / expanded hunger",
+                "# Target: Vanilla Food Pantry / AppleCore food values",
+                "# Fixes multi-use serving amounts with expanded hunger using AppleCore's player-specific maximum. Preserves VFP's serving and consumption rules.",
+                "# Isolates temporary serving nutrition from other food queries, including Spice of Life: Carrot Edition progress calculations. Independent of expanded hunger.",
+                "# Target: Vanilla Food Pantry / hunger restoration",
+                "# Target: Vanilla Food Pantry / food tracking",
+                "# Prevents bites of VFP bread, sandwiches, pies, and other multi-use foods from removing hunger and saturation when your hunger is above 20. Uses your increased hunger limit to work out how much food to eat. For AppleCore with mods that increase maximum hunger.",
+                "# Prevents eating VFP food from making your Spice of Life: Carrot Edition food count and bonus hearts incorrectly drop or jump. Also stops other mods from mistaking the hunger and saturation of your current bite for the values of other VFP foods. Useful even without increased maximum hunger.",
+                "# Target: Vanilla Food Pantry + AppleCore / hunger restoration",
+                "# Target: Vanilla Food Pantry + AppleCore + Spice of Life: Carrot Edition / tasted foods progress",
+                "# Uses AppleCore to find your maximum hunger. Prevents VFP multi-use foods from removing hunger and saturation when your hunger is above 20, and calculates how much food to eat using your increased hunger limit. This tweak needs Vanilla Food Pantry, AppleCore, and a mod that increases maximum hunger.",
+                "# Fixes incorrect food values reported through VFP's AppleCore integration. Prevents eating VFP food from making your Spice of Life: Carrot Edition \"tasted foods\" count and bonus hearts incorrectly drop or jump. Ensures previously eaten foods are counted using their own hunger values. This tweak needs Vanilla Food Pantry, AppleCore, and Spice of Life: Carrot Edition.",
                 "# Uses BlockSlate's existing subtype-aware item instead of a generic ItemBlock. Tested with 1.12.2-2.2.2-31.",
                 "# Rejects an air block returned by the block registry when resolving a state matcher. Tested with 1.12.2-3.1.9.2.",
                 "# Requires the melee target to be visible before a melee attack can proceed. Tested with 1.12.2-2.0.8.10.",
@@ -135,6 +154,8 @@ public final class PatchSettings {
             for (PatchId id : PatchId.values()) {
                 if (id.ghostly() != ghostly) continue;
                 output.append("\n# Target: ").append(id.modName).append('\n');
+                if (id == PatchId.VFP_FOOD) output.append(vfpTested).append('\n');
+                if (id == PatchId.VFP_FOOD_VALUES) output.append(vfpCarrotTested).append('\n');
                 if (!id.description.isEmpty()) output.append("# ").append(id.description).append('\n');
                 String value = properties.getProperty(id.key, "true").trim().replace("\\", "\\\\").replace("\n", "\\n").replace("\r", "\\r");
                 output.append(id.key).append('=').append(value).append('\n');
