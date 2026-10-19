@@ -17,6 +17,36 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 public class ReleaseLinkageTest {
     @TempDir Path directory;
 
+    @Test
+    void astralHooksResolveReleaseWorldFieldsWithoutAstralOrClientClasses() throws Exception {
+        String main = System.getProperty("ecpatches.releaseJar");
+        String test = System.getProperty("ecpatches.releaseTestJar");
+        assumeTrue(main != null && test != null, "Release artifacts not supplied");
+        FixtureLoader loader = new FixtureLoader();
+        loader.add(test, false);
+        loader.add(main, true);
+        Class<?> playerType = loader.loadClass("net.minecraft.entity.player.EntityPlayer");
+        Object serverPlayer = playerType.newInstance(), clientPlayer = playerType.newInstance();
+        Field world = loader.loadClass("net.minecraft.entity.Entity").getField("field_70170_p");
+        world.get(clientPlayer).getClass().getField("field_72995_K").setBoolean(world.get(clientPlayer), true);
+        Class<?> curveType = loader.loadClass("com.gberguy.ecpatches.runtime.AstralPerkCurve");
+        Method calculate = curveType.getMethod("calculate", String.class, int.class);
+        Object serverCurve = calculate.invoke(null, "prev+1000*i*i", 100);
+        Object remoteCurve = calculate.invoke(null, "prev+500*i", 40);
+        Class<?> hooks = loader.loadClass("com.gberguy.ecpatches.runtime.AstralPerkHooks");
+        hooks.getMethod("activateServer", curveType).invoke(null, serverCurve);
+        Object session = hooks.getField("CLIENT").get(null), connection = new Object();
+        session.getClass().getMethod("begin", Object.class).invoke(session, connection);
+        session.getClass().getMethod("accept", Object.class, curveType).invoke(session, connection, remoteCurve);
+        Method table = hooks.getMethod("table", Map.class, int.class, playerType);
+        assertEquals(curveType.getField("thresholds").get(serverCurve), table.invoke(null, Collections.emptyMap(), 30, serverPlayer));
+        assertEquals(curveType.getField("thresholds").get(remoteCurve), table.invoke(null, Collections.emptyMap(), 30, clientPlayer));
+        assertEquals(40, hooks.getMethod("globalCap", int.class, playerType).invoke(null, 30, clientPlayer));
+        assertEquals(100, hooks.getMethod("globalCap", int.class, playerType).invoke(null, 30, serverPlayer));
+        session.getClass().getMethod("end", Object.class).invoke(session, connection);
+        hooks.getMethod("stopServer").invoke(null);
+    }
+
     private static class FixtureLoader extends ClassLoader {
         private final Map<String, byte[]> definitions = new HashMap<>();
 

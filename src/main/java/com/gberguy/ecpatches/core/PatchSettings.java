@@ -22,10 +22,20 @@ public final class PatchSettings {
     private static volatile PatchSettings current;
     private final EnumMap<PatchId, Boolean> enabled;
     private final int villageWaystoneWeight;
+    private final String astralPerkLevelFormula;
+    private static final String[] ASTRAL_FORMULA_HELP = {
+        "# i begins at 1; prev is 0 for the first threshold and then the preceding whole-XP threshold.",
+        "# Cumulative thresholds: level 2 starts at threshold i=1. Earned fractional XP is preserved.",
+        "# Grammar (case-sensitive): i, prev, decimal/scientific numbers, + - * / ^, parentheses; floor(x), ceil(x), sqrt(x), min(a,b), max(a,b). Multiplication requires *.",
+        "# Division is floating point; ^ is right-associative and precedes unary minus: -2^2=-4, 2^3^2=512. Whitespace is ignored.",
+        "# Results are floored to whole XP, must be positive, strictly increasing, at most 9007199254740991, and allow nonzero Astral XP awards. Invalid active formulas stop server startup.",
+        "# Limits: 2048 characters, 512 expression nodes, 64 nesting levels. Multiplayer clients ignore their local toggle and formula."
+    };
 
-    private PatchSettings(EnumMap<PatchId, Boolean> enabled, int villageWaystoneWeight) {
+    private PatchSettings(EnumMap<PatchId, Boolean> enabled, int villageWaystoneWeight, String astralPerkLevelFormula) {
         this.enabled = enabled;
         this.villageWaystoneWeight = villageWaystoneWeight;
+        this.astralPerkLevelFormula = astralPerkLevelFormula;
     }
 
     public static synchronized void initialize(File gameDirectory) {
@@ -95,7 +105,7 @@ public final class PatchSettings {
                 values.put(id, false);
             }
         }
-        return new PatchSettings(values, villageWaystoneWeight);
+        return new PatchSettings(values, villageWaystoneWeight, properties.getProperty("astralPerkLevelFormula", "prev + 1000 * i * i").trim());
     }
 
     private static String render(Properties properties, String original) throws IOException {
@@ -104,6 +114,8 @@ public final class PatchSettings {
         String weightDescription = "# Sets the village Waystone selection weight used by the tweak above. Higher values make Waystones more likely to be selected. Range: 1-1000000. Default: 100. Original Waystones weight: 3.";
         Set<String> generated = new HashSet<>(Arrays.asList(
                 "# Eternal Confluence Tweaks", "# General Fixes", ghostHeader, ghostDescription, weightDescription,
+                "# Uses a configurable cumulative perk XP formula in local worlds and on the server. Clients use server thresholds regardless of local settings. Remove Astral Level Nerf. Changes require a full restart.",
+                "# Limits: 2048 characters, 512 expression nodes, 64 nesting levels. Changes require a full restart. Multiplayer clients ignore their local toggle and formula.",
                 "# villageWaystoneWeight accepts positive integer weights from 1 to 1000000. Higher weights make village Waystones more common. Waystones default is 3.",
                 "# Target: Nutrition UEL / Spice of Life",
                 "# Target: Ancient Spellcraft",
@@ -140,7 +152,9 @@ public final class PatchSettings {
                 "# Requires the melee target to be visible before a melee attack can proceed. Tested with 1.12.2-2.0.8.10.",
                 "# Prevents targeting players with tombstone:ghostly_shape. Does nothing special when that potion is absent. Tested with Lycanites Mobs 1.12.2-2.0.8.10.",
                 "# Fixes invalid ASM descriptors when generating custom Orechid classes by using internal-name-aware type construction. Tested with 1.3.0."));
+        generated.addAll(Arrays.asList(ASTRAL_FORMULA_HELP));
         Set<String> keys = new HashSet<>();
+        keys.add("astralPerkLevelFormula");
         keys.add("villageWaystoneWeight");
         for (PatchId id : PatchId.values()) {
             keys.add(id.key);
@@ -171,7 +185,15 @@ public final class PatchSettings {
                 output.append("# Tested ver: ").append(id.testedVersions).append('\n');
                 if (!id.description.isEmpty()) output.append("# ").append(id.description).append('\n');
                 String value = properties.getProperty(id.key, "true").trim().replace("\\", "\\\\").replace("\n", "\\n").replace("\r", "\\r");
+                if (id == PatchId.ASTRAL_PERK_FORMULA) {
+                    for (String line : ASTRAL_FORMULA_HELP) output.append(line).append('\n');
+                }
                 output.append(id.key).append('=').append(value).append('\n');
+                if (id == PatchId.ASTRAL_PERK_FORMULA) {
+                    String formula = properties.getProperty("astralPerkLevelFormula", "prev + 1000 * i * i").trim()
+                            .replace("\\", "\\\\").replace("\n", "\\n").replace("\r", "\\r");
+                    output.append("astralPerkLevelFormula=").append(formula).append('\n');
+                }
                 if (id == PatchId.WAYSTONES_VILLAGE) {
                     String weight = properties.getProperty("villageWaystoneWeight", "100").trim()
                             .replace("\\", "\\\\").replace("\n", "\\n").replace("\r", "\\r");
@@ -188,6 +210,8 @@ public final class PatchSettings {
     public boolean enabled(PatchId id) {
         return Boolean.TRUE.equals(enabled.get(id));
     }
+
+    public String astralPerkLevelFormula() { return astralPerkLevelFormula; }
 
     public int villageWaystoneWeight() {
         return villageWaystoneWeight;

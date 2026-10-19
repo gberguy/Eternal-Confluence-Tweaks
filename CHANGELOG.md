@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.8] - 2026-10-19
+
+### Added
+
+- Added independently configurable Astral Sorcery perk leveling with `astralPerkLevelFormulaEnabled` and `astralPerkLevelFormula`. The default formula is `prev + 1000 * i * i`, with validation and clear errors for unusable curves.
+- Added server-authoritative perk XP thresholds synchronized before login. Clients follow the server's curve and global cap regardless of local settings, while Astral Sorcery's Game Stages restrictions, fractional XP, research, and existing perks are preserved.
+- Added a README section explaining the Astral Sorcery tweak, its implementation, config settings, and compatibility requirements.
+
+### Changed
+
+- Placed the Astral enable toggle directly above its formula setting, below the explanatory comments. Removed the Astral Level Nerf and restart reminders from those generated comments; existing configs refresh without losing user settings.
+- Moved README dividers between complete tweak entries and simplified the Astral Sorcery description.
+
 ## [0.4.7] - 2026-10-16
 
 ### Changed

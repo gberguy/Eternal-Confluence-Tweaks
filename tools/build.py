@@ -17,6 +17,8 @@ ROOT = Path(__file__).resolve().parents[1]
 BUILD = ROOT / "build" / "standalone"
 DEPENDENCIES = {
     "forge": ("https://maven.minecraftforge.net/net/minecraftforge/forge/1.12.2-14.23.5.2859/forge-1.12.2-14.23.5.2859-universal.jar", "bd8314729d787e35164476d75afb337afb9783917e4f6fa1f77f049adba22f2d"),
+    "guava": ("https://repo.maven.apache.org/maven2/com/google/guava/guava/21.0/guava-21.0.jar", "972139718abc8a4893fa78cba8cf7b2c903f35c97aaf44fa3031b0669948b480"),
+    "netty": ("https://repo.maven.apache.org/maven2/io/netty/netty-all/4.1.9.Final/netty-all-4.1.9.Final.jar", "fd5ad66cdd0a496d281b26c699f4511da7c3f95083659ebb7bae22dab876581a"),
     "asm": ("https://repo.maven.apache.org/maven2/org/ow2/asm/asm-debug-all/5.2/asm-debug-all-5.2.jar", "254b82bec9da4f8efbc8b1f93ab2b87f7465227a82b36cf3d05d9e77a0e8dd2e"),
     "launchwrapper": ("https://libraries.minecraft.net/net/minecraft/launchwrapper/1.12/launchwrapper-1.12.jar", "57f402b626d16cc2705bf2a37add7adbb074f0ca3b3102fa6e23aa303dae682f"),
     "log4j-api": ("https://repo.maven.apache.org/maven2/org/apache/logging/log4j/log4j-api/2.8.1/log4j-api-2.8.1.jar", "1205ab764b1326f7d96d99baa4a4e12614599bf3d735790947748ee116511fa2"),
@@ -74,6 +76,7 @@ def compile_java(java, sources, destination, dependencies):
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--astral-jar", type=Path, default=ROOT / "dev-libs/mods/astralsorcery-1.12.2-1.10.27.jar")
     parser.add_argument("--original-mods", type=Path)
     parser.add_argument("--patched-mods", type=Path)
     parser.add_argument("--ghostly-mods", type=Path)
@@ -171,7 +174,7 @@ def main():
                        ("witcheryWallsJar", dependencies["witchery-villages"]), ("forgeJar", forge_mcp)):
         if path:
             command.append("-Decpatches." + name + "=" + str(path.resolve()))
-    for name, path in (("nutritionJar", args.nutrition_jar), ("spiceOfLifeJar", args.spiceoflife_jar),
+    for name, path in (("astralJar", args.astral_jar), ("nutritionJar", args.nutrition_jar), ("spiceOfLifeJar", args.spiceoflife_jar),
                        ("scalingFeastJar", args.scalingfeast_jar), ("vfpJar", args.vfp_jar),
                        ("appleCoreJar", args.applecore_jar), ("solCarrotJar", args.solcarrot_jar)):
         if path.is_file():

@@ -7,7 +7,11 @@ import com.gberguy.ecpatches.core.PatchSettings;
 import com.gberguy.ecpatches.runtime.GhostlyEvents;
 import com.gberguy.ecpatches.runtime.SaturationGuardEvents;
 import com.gberguy.ecpatches.runtime.WitcheryVillagesToroGuardEvents;
+import com.gberguy.ecpatches.runtime.AstralPerkNetwork;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLServerAboutToStartEvent;
+import net.minecraftforge.fml.common.event.FMLServerStoppedEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -42,5 +46,14 @@ public class EternalConfluenceTweaks {
                     targetPresent ? "present" : "absent");
         }
     }
+
+    @Mod.EventHandler
+    public void postInit(FMLPostInitializationEvent event) { AstralPerkNetwork.initialize(); }
+
+    @Mod.EventHandler
+    public void serverAboutToStart(FMLServerAboutToStartEvent event) { AstralPerkNetwork.startServer(); }
+
+    @Mod.EventHandler
+    public void serverStopped(FMLServerStoppedEvent event) { AstralPerkNetwork.stopServer(); }
 
 }

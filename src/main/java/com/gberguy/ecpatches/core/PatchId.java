@@ -1,6 +1,7 @@
 package com.gberguy.ecpatches.core;
 
 public enum PatchId {
+    ASTRAL_PERK_FORMULA("astralPerkLevelFormulaEnabled", "astralsorcery", "Astral Sorcery", "Uses a configurable cumulative perk XP formula in local worlds and on the server. Clients use server thresholds regardless of local settings.", "astralsorcery-1.12.2-1.10.27"),
     BLOOD_ARSENAL("bloodArsenalSlateItem", "bloodarsenal", "Blood Arsenal", "Fixes compressed slate variants having incorrect names and crafting behavior. Ensures each compressed slate uses the correct item variant.", "BloodArsenal-1.12.2-2.2.2-31"),
     ROOTS("rootsAirStateMatcher", "roots", "Roots", "Fixes Wildwood disappearing instead of converting to Runed Wildwood.", "Roots-1.12.2-3.1.9.2"),
     NUTRITION_LUNCHBOX("nutritionSpiceOfLifeLastItem", "nutrition", "Nutrition UEL + Spice of Life", "Fixes missing Nutrition awards when the last food in a lunchbox or lunchbag stack is consumed. Ensures the final serving awards nutrition like earlier servings.", "Nutrition-UEL-4.16.0, SpiceOfLife-mc1.12-1.3.12"),
