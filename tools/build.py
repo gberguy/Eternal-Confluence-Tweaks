@@ -28,8 +28,9 @@ DEPENDENCIES = {
     "stable": ("https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp_stable/39-1.12/mcp_stable-39-1.12.zip", "13a31f28c11f8f395ffe7e8563ade459f5a0ee46493abbbde3ce6e9493ac4152"),
     "toroquest": ("https://curse.cleanroommc.com/curse/maven/toroquest-revamped-382059/4085781/toroquest-revamped-382059-4085781.jar", "46170074021b879db92ae31c1b77affa24e3bb8aa2a854df05b98c3aef5a847a"),
     "witchery-villages": ("https://curse.cleanroommc.com/curse/maven/witchery-villages-1545448/8765330/witchery-villages-1545448-8765330.jar", "bb59f6a32726fdc8881d15be98654b23bdbedf4d9a70e3c01bffc9a151102eab"),
+    "cooking-for-blockheads": ("https://curse.cleanroommc.com/curse/maven/cooking-for-blockheads-231484/2862651/cooking-for-blockheads-231484-2862651.jar", "3a8ed073a9d84213d6a1f2947bf9e8a4e70730fa123e3ca53769fdc99ef4db9b"),
 }
-MOD_DEPENDENCIES = ("toroquest", "witchery-villages")
+MOD_DEPENDENCIES = ("toroquest", "witchery-villages", "cooking-for-blockheads")
 MODERN_ASM = {
     "asm": "8cadd43ac5eb6d09de05faecca38b917a040bb9139c7edeb4cc81c740b713281",
     "asm-tree": "9929881f59eb6b840e86d54570c77b59ce721d104e6dfd7a40978991c2d3b41f",
@@ -171,7 +172,8 @@ def main():
     for name, path in (("originalMods", args.original_mods), ("patchedMods", args.patched_mods),
                        ("ghostlyMods", args.ghostly_mods), ("waystonesJar", args.waystones_jar), ("minecraftMcp", minecraft_mcp), ("minecraftSrg", minecraft_srg),
                        ("releaseJar", main_srg), ("releaseTestJar", test_srg), ("ghostlyMcp", ghostly_mcp if args.ghostly_mods else None),
-                       ("witcheryWallsJar", dependencies["witchery-villages"]), ("forgeJar", forge_mcp)):
+                       ("witcheryWallsJar", dependencies["witchery-villages"]), ("forgeJar", forge_mcp),
+                       ("cookingJar", dependencies["cooking-for-blockheads"])):
         if path:
             command.append("-Decpatches." + name + "=" + str(path.resolve()))
     for name, path in (("astralJar", args.astral_jar), ("nutritionJar", args.nutrition_jar), ("spiceOfLifeJar", args.spiceoflife_jar),

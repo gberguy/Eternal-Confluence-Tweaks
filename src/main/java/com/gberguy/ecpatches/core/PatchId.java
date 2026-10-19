@@ -1,6 +1,7 @@
 package com.gberguy.ecpatches.core;
 
 public enum PatchId {
+    CFB_MISSING_TOOLS_SORT("cookingForBlockheadsMissingToolsSort", "cookingforblockheads", "Cooking for Blockheads", "Adds a client-side wrench sort button: craftable recipes first, recipes missing tools (including ovens) last, with A-Z names within each group. Does not hide recipes or change crafting.", "CookingForBlockheads_1.12.2-6.5.0"),
     ASTRAL_PERK_FORMULA("astralPerkLevelFormulaEnabled", "astralsorcery", "Astral Sorcery", "Uses a configurable cumulative perk XP formula in local worlds and on the server. Clients use server thresholds regardless of local settings.", "astralsorcery-1.12.2-1.10.27"),
     BLOOD_ARSENAL("bloodArsenalSlateItem", "bloodarsenal", "Blood Arsenal", "Fixes compressed slate variants having incorrect names and crafting behavior. Ensures each compressed slate uses the correct item variant.", "BloodArsenal-1.12.2-2.2.2-31"),
     ROOTS("rootsAirStateMatcher", "roots", "Roots", "Fixes Wildwood disappearing instead of converting to Runed Wildwood.", "Roots-1.12.2-3.1.9.2"),

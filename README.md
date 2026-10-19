@@ -10,6 +10,20 @@ Settings are in `config/eternalconfluencetweaks.cfg`. All tweaks default to `tru
 
 ## Tweaks
 
+### Cooking for Blockheads - missing tools last
+
+Adds a fourth sort button with a gray wrench icon to the Cooking Book and Cooking Table recipe browser. It places craftable outputs first and outputs currently missing tools last, with case-insensitive A-Z names within each group. Clicking the button again keeps the same direction.
+
+Uses Cooking for Blockheads' existing recipe statuses, so recipes move into the craftable group when their required tools become available. Missing ovens also count as missing tools. The no-filter book keeps all its entries, with missing-ingredient outputs between the craftable and missing-tool groups. Crafting rules, alternative-recipe availability, and the original three sorting options remain unchanged.
+
+Registers through CfB's sort-button API on enabled clients after its standard buttons. A fingerprint-checked hook in `ContainerRecipeBook.setItemList` restores the wrench order after CfB preserves a selected recipe's old slot during inventory or kitchen updates. The hook leaves other sorting modes unchanged. This tweak does not require ECT on the server and is inactive when CfB is absent.
+
+- **Requires:** Cooking for Blockheads; ECT on the client for this tweak
+- **Tested ver:** CookingForBlockheads_1.12.2-6.5.0
+- **Config:** `cookingForBlockheadsMissingToolsSort`
+
+---
+
 ### Astral Sorcery — configurable perk leveling
 
 A tweak that lets you set how much total experience is needed for each Astral Sorcery perk level using a custom formula in the config.

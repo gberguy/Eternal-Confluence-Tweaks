@@ -48,7 +48,22 @@ public class EternalConfluenceTweaks {
     }
 
     @Mod.EventHandler
-    public void postInit(FMLPostInitializationEvent event) { AstralPerkNetwork.initialize(); }
+    public void postInit(FMLPostInitializationEvent event) {
+        AstralPerkNetwork.initialize();
+        if (event.getSide().isClient() && PatchSettings.current().enabled(PatchId.CFB_MISSING_TOOLS_SORT)
+                && Loader.isModLoaded("cookingforblockheads")) {
+            try {
+                if (event.buildSoftDependProxy("cookingforblockheads",
+                        "com.gberguy.ecpatches.compat.CookingMissingToolsSortButton").isPresent()) {
+                    LOGGER.info("{}: registered client sort button", PatchId.CFB_MISSING_TOOLS_SORT.key);
+                } else {
+                    LOGGER.warn("{}: sort API unavailable; leaving existing buttons unchanged", PatchId.CFB_MISSING_TOOLS_SORT.key);
+                }
+            } catch (LinkageError error) {
+                LOGGER.warn("{}: sort API unavailable; leaving existing buttons unchanged", PatchId.CFB_MISSING_TOOLS_SORT.key, error);
+            }
+        }
+    }
 
     @Mod.EventHandler
     public void serverAboutToStart(FMLServerAboutToStartEvent event) { AstralPerkNetwork.startServer(); }

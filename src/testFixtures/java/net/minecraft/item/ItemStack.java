@@ -24,6 +24,8 @@ public class ItemStack {
     public void setCount(int count) { this.count = count; }
     public boolean isEmpty() { return getItemRaw() == null || getItemRaw() == Item.AIR || count <= 0; }
     public int getMetadata() { return metadata; }
+    public int getItemDamage() { return metadata; }
+    public String getDisplayName() { return tag.getOrDefault("displayName", ""); }
 
     public ItemStack copy() {
         ItemStack copy = new ItemStack(getItem(), count, metadata);

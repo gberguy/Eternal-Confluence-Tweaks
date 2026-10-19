@@ -30,6 +30,7 @@ public final class PatchTransformer implements IClassTransformer {
         modules.add(new VfpFoodPatch());
         modules.add(new VfpFoodValuesPatch());
         modules.add(new ScalingFeastSaturationHudPatch());
+        modules.add(new CookingSortRefreshPatch());
         for (MethodPatch patch : modules) {
             String key = patch.className + "#" + patch.methodName + patch.descriptor;
             if (patches.put(key, patch) != null) {

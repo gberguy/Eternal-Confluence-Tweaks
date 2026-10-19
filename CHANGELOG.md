@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.4.9] - 2026-10-19
+
+### Added
+
+- Added an independently configurable Cooking for Blockheads wrench sort button with `cookingForBlockheadsMissingToolsSort`, enabled by default. The Cooking Book and Cooking Table can now place craftable outputs first and outputs missing tools or ovens last, with case-insensitive A-Z names within each group and a fixed sorting direction.
+- Added the custom wrench texture and localized tooltip. Existing sorting options, recipe visibility, tool detection, and crafting behavior remain unchanged. Registration runs only on enabled clients with Cooking for Blockheads present.
+
+### Fixed
+
+- Preserved the wrench sort order after inventory or kitchen updates, which otherwise let CfB reinsert a selected output into its previous slot after sorting. The targeted correction applies only to the new sort mode.
+
+### Validation
+
+- Verified against Cooking for Blockheads 6.5.0 with automated comparator, bytecode, client/server lifecycle, optional-mod, and release-linkage checks. The project owner reported passing in-game tests.
+
 ## [0.4.8] - 2026-10-19
 
 ### Added
